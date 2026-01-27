@@ -83,3 +83,10 @@ body .icon-parent::before {
   visibility: hidden;
   display: inline-block;
 }
+
+@media print {
+    .print-page-button {
+        display: none;
+        text-decoration : none;
+    }
+}
