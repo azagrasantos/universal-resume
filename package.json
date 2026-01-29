@@ -17,14 +17,22 @@
     "build": "cross-env NODE_ENV=build postcss ./tailwind.css -o ./docs/build.css"
   },
   "dependencies": {
-    "@fullhuman/postcss-purgecss": "^2.0.6",
-    "autoprefixer": "^9.7.4",
+    "@fullhuman/postcss-purgecss": "^8.0.0",
+    "autoprefixer": "^10.4.23",
     "concurrently": "^5.1.0",
     "cross-env": "^7.0.0",
-    "cssnano": "^4.1.10",
-    "live-server": "^1.2.1",
-    "postcss-cli": "^7.0.0",
-    "postcss-import": "^12.0.1",
-    "tailwindcss": "^1.2.0"
+    "cssnano": "^7.1.2",
+    "i18next": "^25.8.0",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "i18next-fs-backend": "^2.6.1",
+    "i18next-http-backend": "^3.0.2",
+    "i18next-http-middleware": "^3.9.2",
+    "live-server": "^1.2.0",
+    "postcss-cli": "^11.0.1",
+    "postcss-import": "^16.1.1",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1"
   }
 }
