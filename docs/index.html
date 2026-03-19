@@ -364,7 +364,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/user-profile?username=carlosazagrasantos');
+        const response = await fetch('https://universal-resume-backend.onrender.com/api/user-profile?username=carlosazagrasantos');
         const result = await response.json();
         // The name is in result.data.data.full_name
         if (result.data && result.data.data && result.data.data.full_name) {
