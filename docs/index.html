@@ -365,10 +365,10 @@
     const CACHE_KEY = 'linkedin-profile-cache';
     const CACHE_TIMESTAMP_KEY = 'linkedin-profile-cache-timestamp';
     const API_URL = 'https://universal-resume-backend.onrender.com/api/user-profile?username=carlosazagrasantos';
-    const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 horas
+    const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
     /**
-     * Carga datos del localStorage
+     * Load data from localStorage
      */
     function loadFromLocalCache() {
       try {
@@ -387,7 +387,7 @@
     }
 
     /**
-     * Guarda datos en localStorage
+     * Save data to localStorage
      */
     function saveToLocalCache(data) {
       try {
@@ -399,7 +399,7 @@
     }
 
     /**
-     * Renderiza el perfil en el DOM
+     * Render profile data to the DOM
      */
     function renderProfile(result) {
       // The name is in result.data.data.full_name
@@ -492,37 +492,37 @@
     }
 
     /**
-     * Sincroniza con el servidor en background
+     * Sync with server in background
      */
     async function syncWithServer() {
       try {
         const response = await fetch(API_URL);
         const result = await response.json();
-        // Guardar en localStorage y renderizar
+        // Save to localStorage and render
         saveToLocalCache(result);
         renderProfile(result);
       } catch (error) {
         console.error('Error syncing with server:', error);
-        // Si falla, los datos en caché ya están siendo mostrados
+        // If fails, cached data is already being displayed
       }
     }
 
     /**
-     * Carga el perfil: primero desde caché local, luego sincroniza en background
+     * Load profile: first from local cache, then sync in background
      */
     function loadProfile() {
       const localCache = loadFromLocalCache();
       
-      // 1. Si hay datos en caché local, mostrarlos inmediatamente
+      // 1. If local cache exists, display it immediately
       if (localCache) {
         renderProfile(localCache.data);
       }
       
-      // 2. Sincronizar con servidor en background (sin bloquecar)
+      // 2. Sync with server in background (non-blocking)
       syncWithServer();
     }
 
-    // Ejecutar cuando el DOM está listo
+    // Run when DOM is ready
     document.addEventListener('DOMContentLoaded', loadProfile);
   </script>
 
