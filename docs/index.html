@@ -366,12 +366,12 @@
       try {
         const response = await fetch('http://localhost:3000/api/user-profile?username=carlosazagrasantos');
         const result = await response.json();
-        // El nombre está en result.data.data.full_name
+        // The name is in result.data.data.full_name
         if (result.data && result.data.data && result.data.data.full_name) {
           const nameElem = document.getElementById('profile-name');
           if (nameElem) nameElem.textContent = result.data.data.full_name;
         }
-        // La bio está en result.data.data.bio
+        // The bio is in result.data.data.bio
         if (result.data && result.data.data && result.data.data.bio) {
           const bioElem = document.getElementById('profile-bio');
           if (bioElem) {
@@ -382,27 +382,27 @@
           }
         }
 
-        // Experiencia laboral
+        // Work experience
         if (result.data && result.data.data && result.data.data.experiences && Array.isArray(result.data.data.experiences.data)) {
           const expElem = document.getElementById('profile-experience');
           if (expElem) {
             expElem.innerHTML = '';
             result.data.data.experiences.data.forEach(exp => {
-              // Título (h3): company.name
+              // Title (h3): company.name
               let company = exp.company && exp.company.name ? exp.company.name : '';
               const companyUrl = exp.company && exp.company.url ? exp.company.url : '';
               if (companyUrl) {
-                // Quitar http(s):// para mostrar solo el dominio
+                // Remove http(s):// to show only the domain
                 let displayUrl = companyUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
                 company = `<a href="//${displayUrl}" class="group">${company}<span class="inline-block text-gray-550 print:text-black font-normal group-hover:text-gray-700 transition duration-100 ease-in">↗</span></a>`;
               }
-              // Fechas y puesto
+              // Dates and position
               let start = exp.date && exp.date.start ? exp.date.start : '';
               let end = exp.date && exp.date.end ? exp.date.end : '';
               let title = exp.title || '';
-              // Formato fechas: Dec 21 - Dec 25 | Título
+              // Date format: Dec 21 - Dec 25 | Title
               let dateTitle = `${start} - ${end} | ${title}`;
-              // Descripciones
+              // Descriptions
               let descHtml = '';
               if (typeof exp.description === 'string') {
                 let descNorm = exp.description.replace(/\u200B/g, '\n');
@@ -436,7 +436,7 @@
               let start = edu.date && edu.date.start ? edu.date.start : '';
               let end = edu.date && edu.date.end ? edu.date.end : '';
               let degree = edu.degree || '';
-              // Si end > año actual, mostrar 'Current'
+              // If end > current year, show 'Current'
               let endDisplay = end;
               if (end && !isNaN(end) && parseInt(end) > currentYear) {
                 endDisplay = 'Current';
