@@ -375,8 +375,10 @@
         const cached = localStorage.getItem(CACHE_KEY);
         const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
         if (cached && timestamp) {
+          const parsedData = JSON.parse(cached);
+          console.log('Cache loaded from localStorage:', parsedData);
           return {
-            data: JSON.parse(cached),
+            data: parsedData,
             timestamp: parseInt(timestamp)
           };
         }
@@ -409,16 +411,16 @@
      * Render profile data to the DOM
      */
     function renderProfile(result) {
-      // The name is in result.data.data.full_name
-      if (result.data && result.data.data && result.data.data.full_name) {
+      // The structure is: result.data.full_name (not result.data.data.full_name)
+      if (result && result.data && result.data.full_name) {
         const nameElem = document.getElementById('profile-name');
-        if (nameElem) nameElem.textContent = result.data.data.full_name;
+        if (nameElem) nameElem.textContent = result.data.full_name;
       }
-      // The bio is in result.data.data.bio
-      if (result.data && result.data.data && result.data.data.bio) {
+      // The bio is in result.data.bio
+      if (result && result.data && result.data.bio) {
         const bioElem = document.getElementById('profile-bio');
         if (bioElem) {
-          let bio = result.data.data.bio;
+          let bio = result.data.bio;
           bio = bio.replace(/\u200B/g, '\n');
           bio = bio.replace(/(\n)+/g, '\n');
           bioElem.innerHTML = bio.replace(/\n/g, '<br>');
@@ -426,11 +428,11 @@
       }
 
       // Work experience
-      if (result.data && result.data.data && result.data.data.experiences && Array.isArray(result.data.data.experiences.data)) {
+      if (result && result.data && result.data.experiences && Array.isArray(result.data.experiences.data)) {
         const expElem = document.getElementById('profile-experience');
         if (expElem) {
           expElem.innerHTML = '';
-          result.data.data.experiences.data.forEach(exp => {
+          result.data.experiences.data.forEach(exp => {
             // Title (h3): company.name
             let company = exp.company && exp.company.name ? exp.company.name : '';
             const companyUrl = exp.company && exp.company.url ? exp.company.url : '';
@@ -469,12 +471,12 @@
       }
 
       // EDUCATION
-      if (result.data && result.data.data && result.data.data.educations && Array.isArray(result.data.data.educations.data)) {
+      if (result && result.data && result.data.educations && Array.isArray(result.data.educations.data)) {
         const eduElem = document.getElementById('profile-education');
         if (eduElem) {
           eduElem.innerHTML = '';
           const currentYear = new Date().getFullYear();
-          result.data.data.educations.data.forEach(edu => {
+          result.data.educations.data.forEach(edu => {
             const school = edu.school || '';
             let start = edu.date && edu.date.start ? edu.date.start : '';
             let end = edu.date && edu.date.end ? edu.date.end : '';
@@ -532,7 +534,8 @@
       
       // 1. Priority: Always display cache first if it exists
       if (localCache && localCache.data) {
-        console.log('Cache found, rendering immediately', localCache);
+        console.log('Cache found, rendering immediately');
+        // Pass the full result object, not wrapped in another layer
         renderProfile(localCache.data);
       } else {
         console.log('No cache found on page load');
