@@ -362,101 +362,185 @@
   </main>
 
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const response = await fetch('https://universal-resume-backend.onrender.com/api/user-profile?username=carlosazagrasantos');
-        const result = await response.json();
-        // The name is in result.data.data.full_name
-        if (result.data && result.data.data && result.data.data.full_name) {
-          const nameElem = document.getElementById('profile-name');
-          if (nameElem) nameElem.textContent = result.data.data.full_name;
-        }
-        // The bio is in result.data.data.bio
-        if (result.data && result.data.data && result.data.data.bio) {
-          const bioElem = document.getElementById('profile-bio');
-          if (bioElem) {
-            let bio = result.data.data.bio;
-            bio = bio.replace(/\u200B/g, '\n');
-            bio = bio.replace(/(\n)+/g, '\n');
-            bioElem.innerHTML = bio.replace(/\n/g, '<br>');
-          }
-        }
+    const CACHE_FILE_URL = './linkedin-cache.json';
+    const API_URL = 'https://universal-resume-backend.onrender.com/api/user-profile?username=carlosazagrasantos';
+    const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+    const LOCAL_CACHE_KEY = 'linkedin-profile-cache';
+    const LOCAL_CACHE_TIMESTAMP_KEY = 'linkedin-profile-cache-timestamp';
 
-        // Work experience
-        if (result.data && result.data.data && result.data.data.experiences && Array.isArray(result.data.data.experiences.data)) {
-          const expElem = document.getElementById('profile-experience');
-          if (expElem) {
-            expElem.innerHTML = '';
-            result.data.data.experiences.data.forEach(exp => {
-              // Title (h3): company.name
-              let company = exp.company && exp.company.name ? exp.company.name : '';
-              const companyUrl = exp.company && exp.company.url ? exp.company.url : '';
-              if (companyUrl) {
-                // Remove http(s):// to show only the domain
-                let displayUrl = companyUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                company = `<a href="//${displayUrl}" class="group">${company}<span class="inline-block text-gray-550 print:text-black font-normal group-hover:text-gray-700 transition duration-100 ease-in">↗</span></a>`;
-              }
-              // Dates and position
-              let start = exp.date && exp.date.start ? exp.date.start : '';
-              let end = exp.date && exp.date.end ? exp.date.end : '';
-              let title = exp.title || '';
-              // Date format: Dec 21 - Dec 25 | Title
-              let dateTitle = `${start} - ${end} | ${title}`;
-              // Descriptions
-              let descHtml = '';
-              if (typeof exp.description === 'string') {
-                let descNorm = exp.description.replace(/\u200B/g, '\n');
-                descNorm = descNorm.replace(/(\n)+/g, '\n');
-                const descLines = descNorm.split('\n').filter(line => line.trim() !== '');
-                descHtml = '<ul>' + descLines.map(line => {
-                  return `<li class="mt-2.1 text-md text-gray-700 leading-normal"><span class="absolute -ml-3 sm:-ml-3.2 select-none transform -translate-y-px">›</span>${line}</li>`;
-                }).join('') + '</ul>';
-              }
-              expElem.innerHTML += `
-                <section class="mb-4.5 break-inside-avoid">
-                  <header>
-                    <h3 class="text-lg font-semibold text-gray-700 leading-snugish">${company}</h3>
-                    <p class="leading-normal text-md text-gray-650">${dateTitle}</p>
-                  </header>
-                  ${descHtml}
-                </section>
-              `;
-            });
-          }
-        }
-
-        // EDUCATION
-        if (result.data && result.data.data && result.data.data.educations && Array.isArray(result.data.data.educations.data)) {
-          const eduElem = document.getElementById('profile-education');
-          if (eduElem) {
-            eduElem.innerHTML = '';
-            const currentYear = new Date().getFullYear();
-            result.data.data.educations.data.forEach(edu => {
-              const school = edu.school || '';
-              let start = edu.date && edu.date.start ? edu.date.start : '';
-              let end = edu.date && edu.date.end ? edu.date.end : '';
-              let degree = edu.degree || '';
-              // If end > current year, show 'Current'
-              let endDisplay = end;
-              if (end && !isNaN(end) && parseInt(end) > currentYear) {
-                endDisplay = 'Current';
-              }
-              let dateDegree = `${start} - ${endDisplay} | ${degree}`;
-              eduElem.innerHTML += `
-                <section class="mb-4.5 break-inside-avoid">
-                  <header>
-                    <h3 class="text-lg font-semibold text-gray-700 leading-snugish">${school}</h3>
-                    <p class="leading-normal text-md text-gray-650">${dateDegree}</p>
-                  </header>
-                </section>
-              `;
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching LinkedIn profile:', error);
+    /**
+     * Render profile data to the DOM
+     */
+    function renderProfile(result) {
+      // The name is in result.data.data.full_name
+      if (result.data && result.data.data && result.data.data.full_name) {
+        const nameElem = document.getElementById('profile-name');
+        if (nameElem) nameElem.textContent = result.data.data.full_name;
       }
-    });
+      // The bio is in result.data.data.bio
+      if (result.data && result.data.data && result.data.data.bio) {
+        const bioElem = document.getElementById('profile-bio');
+        if (bioElem) {
+          let bio = result.data.data.bio;
+          bio = bio.replace(/\u200B/g, '\n');
+          bio = bio.replace(/(\n)+/g, '\n');
+          bioElem.innerHTML = bio.replace(/\n/g, '<br>');
+        }
+      }
+
+      // Work experience
+      if (result.data && result.data.data && result.data.data.experiences && Array.isArray(result.data.data.experiences.data)) {
+        const expElem = document.getElementById('profile-experience');
+        if (expElem) {
+          expElem.innerHTML = '';
+          result.data.data.experiences.data.forEach(exp => {
+            // Title (h3): company.name
+            let company = exp.company && exp.company.name ? exp.company.name : '';
+            const companyUrl = exp.company && exp.company.url ? exp.company.url : '';
+            if (companyUrl) {
+              // Remove http(s):// to show only the domain
+              let displayUrl = companyUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+              company = `<a href="//${displayUrl}" class="group">${company}<span class="inline-block text-gray-550 print:text-black font-normal group-hover:text-gray-700 transition duration-100 ease-in">↗</span></a>`;
+            }
+            // Dates and position
+            let start = exp.date && exp.date.start ? exp.date.start : '';
+            let end = exp.date && exp.date.end ? exp.date.end : '';
+            let title = exp.title || '';
+            // Date format: Dec 21 - Dec 25 | Title
+            let dateTitle = `${start} - ${end} | ${title}`;
+            // Descriptions
+            let descHtml = '';
+            if (typeof exp.description === 'string') {
+              let descNorm = exp.description.replace(/\u200B/g, '\n');
+              descNorm = descNorm.replace(/(\n)+/g, '\n');
+              const descLines = descNorm.split('\n').filter(line => line.trim() !== '');
+              descHtml = '<ul>' + descLines.map(line => {
+                return `<li class="mt-2.1 text-md text-gray-700 leading-normal"><span class="absolute -ml-3 sm:-ml-3.2 select-none transform -translate-y-px">›</span>${line}</li>`;
+              }).join('') + '</ul>';
+            }
+            expElem.innerHTML += `
+              <section class="mb-4.5 break-inside-avoid">
+                <header>
+                  <h3 class="text-lg font-semibold text-gray-700 leading-snugish">${company}</h3>
+                  <p class="leading-normal text-md text-gray-650">${dateTitle}</p>
+                </header>
+                ${descHtml}
+              </section>
+            `;
+          });
+        }
+      }
+
+      // EDUCATION
+      if (result.data && result.data.data && result.data.data.educations && Array.isArray(result.data.data.educations.data)) {
+        const eduElem = document.getElementById('profile-education');
+        if (eduElem) {
+          eduElem.innerHTML = '';
+          const currentYear = new Date().getFullYear();
+          result.data.data.educations.data.forEach(edu => {
+            const school = edu.school || '';
+            let start = edu.date && edu.date.start ? edu.date.start : '';
+            let end = edu.date && edu.date.end ? edu.date.end : '';
+            let degree = edu.degree || '';
+            // If end > current year, show 'Current'
+            let endDisplay = end;
+            if (end && !isNaN(end) && parseInt(end) > currentYear) {
+              endDisplay = 'Current';
+            }
+            let dateDegree = `${start} - ${endDisplay} | ${degree}`;
+            eduElem.innerHTML += `
+              <section class="mb-4.5 break-inside-avoid">
+                <header>
+                  <h3 class="text-lg font-semibold text-gray-700 leading-snugish">${school}</h3>
+                  <p class="leading-normal text-md text-gray-650">${dateDegree}</p>
+                </header>
+              </section>
+            `;
+          });
+        }
+      }
+    }
+
+    /**
+     * Save data to localStorage
+     */
+    function saveToLocalCache(data) {
+      try {
+        localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(LOCAL_CACHE_TIMESTAMP_KEY, Date.now().toString());
+        console.log('Cache saved to localStorage');
+      } catch (error) {
+        console.error('Error saving to localStorage:', error);
+      }
+    }
+
+    /**
+     * Check if timestamp is older than 24 hours
+     */
+    function isCacheExpired(timestamp) {
+      return Date.now() - timestamp > CACHE_EXPIRY;
+    }
+
+    /**
+     * Load profile from backend cache file
+     * 1. Load JSON cache from backend
+     * 2. Display immediately
+     * 3. Check if expired (>24h)
+     * 4. If expired, fetch from API and update
+     */
+    async function loadProfile() {
+      try {
+        // Step 1: Load backend cache file
+        console.log('Loading backend cache file...');
+        const cacheResponse = await fetch(CACHE_FILE_URL);
+        if (!cacheResponse.ok) {
+          throw new Error(`Cache file not available: ${cacheResponse.status}`);
+        }
+        
+        const cacheData = await cacheResponse.json();
+        console.log('Backend cache loaded, timestamp:', cacheData.timestamp);
+        
+        // Step 2: Display immediately
+        renderProfile(cacheData);
+        
+        // Step 3: Check if cache is expired
+        const isExpired = isCacheExpired(cacheData.timestamp);
+        console.log('Cache expired:', isExpired);
+        
+        // Step 4: If expired, fetch from API
+        if (isExpired) {
+          console.log('Cache older than 24h, fetching from API...');
+          try {
+            const apiResponse = await fetch(API_URL);
+            
+            // Only update if API responds with 200 OK
+            if (apiResponse.status === 200) {
+              const apiData = await apiResponse.json();
+              console.log('API returned 200 OK, updating profile and cache');
+              
+              // Update page with API data
+              renderProfile(apiData);
+              
+              // Save to localStorage for offline access
+              saveToLocalCache(apiData);
+            } else {
+              console.log(`API returned ${apiResponse.status}, keeping cached data`);
+            }
+          } catch (error) {
+            console.error('Error fetching from API:', error);
+            console.log('Keeping current cache data');
+          }
+        } else {
+          console.log('Cache is fresh, no API call needed');
+        }
+        
+      } catch (error) {
+        console.error('Error loading backend cache:', error);
+      }
+    }
+
+    // Run when DOM is ready
+    document.addEventListener('DOMContentLoaded', loadProfile);
   </script>
 
 </body>
