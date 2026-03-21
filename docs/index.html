@@ -387,6 +387,13 @@
     }
 
     /**
+     * Check if cache is expired (older than 24 hours)
+     */
+    function isCacheExpired(timestamp) {
+      return Date.now() - timestamp > CACHE_EXPIRY;
+    }
+
+    /**
      * Save data to localStorage
      */
     function saveToLocalCache(data) {
@@ -492,15 +499,21 @@
     }
 
     /**
-     * Sync with server in background
+     * Sync with server in background (only if cache is missing or expired)
      */
-    async function syncWithServer() {
+    async function syncWithServer(shouldSync) {
+      if (!shouldSync) {
+        console.log('Cache is fresh, skipping server sync');
+        return;
+      }
+
       try {
-        const response = await fetch(API_URL);
+        const response = await fetch(API_URL, { timeout: 10000 });
         const result = await response.json();
         // Save to localStorage and render
         saveToLocalCache(result);
         renderProfile(result);
+        console.log('Server sync successful, cache updated');
       } catch (error) {
         console.error('Error syncing with server:', error);
         // If fails, cached data is already being displayed
@@ -508,18 +521,28 @@
     }
 
     /**
-     * Load profile: first from local cache, then sync in background
+     * Load profile: first from local cache (always), then optionally sync server
      */
     function loadProfile() {
       const localCache = loadFromLocalCache();
-      
-      // 1. If local cache exists, display it immediately
+      let shouldSyncWithServer = false;
+
+      // 1. If local cache exists and is fresh, display it
       if (localCache) {
         renderProfile(localCache.data);
+        // Check if cache is expired
+        shouldSyncWithServer = isCacheExpired(localCache.timestamp);
+        if (shouldSyncWithServer) {
+          console.log('Cache expired, will sync with server');
+        }
+      } else {
+        // No cache exists, must sync with server
+        shouldSyncWithServer = true;
+        console.log('No cache found, will fetch from server');
       }
-      
-      // 2. Sync with server in background (non-blocking)
-      syncWithServer();
+
+      // 2. Sync with server in background only if needed (non-blocking)
+      syncWithServer(shouldSyncWithServer);
     }
 
     // Run when DOM is ready
