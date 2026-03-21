@@ -499,50 +499,48 @@
     }
 
     /**
-     * Sync with server in background (only if cache is missing or expired)
+     * Sync with server in background
+     * Always attempts to fetch, but only updates if cache is older than 24 hours
      */
-    async function syncWithServer(shouldSync) {
-      if (!shouldSync) {
-        console.log('Cache is fresh, skipping server sync');
-        return;
-      }
-
+    async function syncWithServer(localCache) {
       try {
-        const response = await fetch(API_URL, { timeout: 10000 });
+        console.log('Fetching from API...');
+        const response = await fetch(API_URL);
         const result = await response.json();
-        // Save to localStorage and render
-        saveToLocalCache(result);
-        renderProfile(result);
-        console.log('Server sync successful, cache updated');
+        
+        // Determine if we should update: no local cache OR cache is expired
+        const shouldUpdate = !localCache || isCacheExpired(localCache.timestamp);
+        
+        if (shouldUpdate) {
+          console.log('Cache is old/missing, updating with new data from server');
+          saveToLocalCache(result);
+          renderProfile(result);
+        } else {
+          console.log('Cache is fresh, keeping current data');
+        }
       } catch (error) {
-        console.error('Error syncing with server:', error);
-        // If fails, cached data is already being displayed
+        console.error('Error fetching from server:', error);
+        // If fails, cached data remains displayed
       }
     }
 
     /**
-     * Load profile: first from local cache (always), then optionally sync server
+     * Load profile: Display cache immediately, then sync server in background
      */
     function loadProfile() {
       const localCache = loadFromLocalCache();
-      let shouldSyncWithServer = false;
-
-      // 1. If local cache exists and is fresh, display it
-      if (localCache) {
+      
+      // 1. Priority: Always display cache first if it exists
+      if (localCache && localCache.data) {
+        console.log('Cache found, rendering immediately', localCache);
         renderProfile(localCache.data);
-        // Check if cache is expired
-        shouldSyncWithServer = isCacheExpired(localCache.timestamp);
-        if (shouldSyncWithServer) {
-          console.log('Cache expired, will sync with server');
-        }
       } else {
-        // No cache exists, must sync with server
-        shouldSyncWithServer = true;
-        console.log('No cache found, will fetch from server');
+        console.log('No cache found on page load');
       }
-
-      // 2. Sync with server in background only if needed (non-blocking)
-      syncWithServer(shouldSyncWithServer);
+      
+      // 2. Always attempt to sync with server in background
+      // This will update the cache and page if needed (cache expired or missing)
+      syncWithServer(localCache);
     }
 
     // Run when DOM is ready
